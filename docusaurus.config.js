@@ -95,15 +95,15 @@ const config = {
             ],
           },
           {
-            title: 'Resources',
+            title: 'Modules',
             items: [
               {
-                label: 'Hardware Guide',
-                to: '/docs/resources/hardware-guide',
+                label: 'Module 2: Simulation',
+                to: '/docs/module2/gazebo-physics',
               },
               {
-                label: 'Software Setup',
-                to: '/docs/resources/software-setup',
+                label: 'Module 3: NVIDIA Isaac',
+                to: '/docs/module3/isaac-sim',
               },
             ],
           },
