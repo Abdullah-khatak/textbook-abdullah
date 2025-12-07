@@ -120,8 +120,6 @@ This course prioritizes **simulation first**, making it accessible even without 
 - **Sensors**: Intel RealSense depth camera ($349)
 - **Robot Platform**: Unitree Go2 or similar ($1,800+)
 
-See the [Hardware Guide](/docs/resources/hardware-guide) for detailed specifications.
-
 ## Software Requirements
 
 We'll be using these open-source and commercial tools:
@@ -132,8 +130,6 @@ We'll be using these open-source and commercial tools:
 - **NVIDIA Isaac Sim**: Advanced simulation (free)
 - **Python 3.10+**: Programming language
 - **OpenAI API**: For language models (requires API key)
-
-Detailed installation instructions are in the [Software Setup](/docs/resources/software-setup) guide.
 
 ## Time Commitment
 

@@ -28,7 +28,6 @@ Nav2 is the successor to the ROS 1 navigation stack, rebuilt for ROS 2 with impr
 Nav2 consists of several interconnected servers and plugins:
 
 ### Core Components
-
 ```
 Nav2 Architecture
 ├── BT Navigator Server (Behavior Trees)
@@ -41,7 +40,6 @@ Nav2 Architecture
 ```
 
 ### Data Flow
-
 ```
 Goal → BT Navigator → Planner → Path → Controller → Velocity Commands
                           ↓
@@ -53,7 +51,6 @@ Goal → BT Navigator → Planner → Path → Controller → Velocity Commands
 ## Installing Nav2
 
 ### Installation
-
 ```bash
 # Install Nav2 packages
 sudo apt install ros-humble-navigation2 ros-humble-nav2-bringup
@@ -66,7 +63,6 @@ sudo apt install ros-humble-rviz2
 ```
 
 ### Verify Installation
-
 ```bash
 ros2 pkg list | grep nav2
 ```
@@ -88,7 +84,6 @@ Nav2 requires:
 5. **Map** (for map-based navigation)
 
 ### TF Tree Structure
-
 ```
 map → odom → base_link → sensors (lidar_link, camera_link, etc.)
 ```
@@ -103,7 +98,6 @@ map → odom → base_link → sensors (lidar_link, camera_link, etc.)
 Before navigation, create a map:
 
 ### Launch SLAM Toolbox
-
 ```bash
 # Start robot (simulation or real)
 ros2 launch my_robot robot.launch.py
@@ -113,7 +107,6 @@ ros2 launch slam_toolbox online_async_launch.py
 ```
 
 ### Drive Robot to Map Environment
-
 ```bash
 # Teleoperate robot to explore
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
@@ -122,7 +115,6 @@ ros2 run teleop_twist_keyboard teleop_twist_keyboard
 Use keyboard to drive around and build map.
 
 ### Save Map
-
 ```bash
 ros2 run nav2_map_server map_saver_cli -f my_map
 ```
@@ -138,7 +130,6 @@ Nav2 configuration is done via YAML files.
 ### Basic Nav2 Configuration
 
 Create `nav2_params.yaml`:
-
 ```yaml
 bt_navigator:
   ros__parameters:
@@ -313,7 +304,6 @@ global_costmap:
 ### Launch File
 
 Create `nav2_launch.py`:
-
 ```python
 from launch import LaunchDescription
 from launch_ros.actions import Node
@@ -374,7 +364,6 @@ def generate_launch_description():
 ```
 
 ### Run Navigation
-
 ```bash
 # Terminal 1: Launch robot and sensors
 ros2 launch my_robot robot.launch.py
@@ -397,7 +386,6 @@ rviz2 -d $(ros2 pkg prefix nav2_bringup)/share/nav2_bringup/rviz/nav2_default_vi
 5. Robot plans and navigates!
 
 ### Programmatically
-
 ```python
 import rclpy
 from rclpy.node import Node
@@ -581,7 +569,6 @@ FollowPath:
 Nav2 uses **Behavior Trees** to coordinate navigation behaviors.
 
 ### Default Navigation BT
-
 ```xml
 <root>
   <BehaviorTree ID="NavigateWithReplanning">
@@ -616,7 +603,6 @@ Add custom behaviors when navigation fails:
 ## Handling Dynamic Obstacles
 
 ### Obstacle Layer Configuration
-
 ```yaml
 obstacle_layer:
   enabled: True
@@ -707,9 +693,9 @@ vtheta_samples: 20  # Angular velocity samples
 
 ## What's Next?
 
-In the final chapter of Module 3, we'll work through hands-on perception and navigation exercises integrating Isaac ROS and Nav2.
+Congratulations on completing Module 3! You now understand NVIDIA Isaac platform and Nav2 navigation. In Module 4, we'll integrate Language Models with robotics for natural language control.
 
-Continue to: [Perception Exercises →](/docs/module3/perception-exercises)
+Continue to: [Module 4: Vision-Language-Action →](/docs/module4/introduction-vla)
 
 ## Exercises
 
@@ -730,4 +716,4 @@ Configure Nav2 for a simulated humanoid robot. Account for balance constraints.
 
 ---
 
-**Navigation**: [← Previous: Isaac ROS](/docs/module3/isaac-ros) | [Next: Perception Exercises →](/docs/module3/perception-exercises)
+**Navigation**: [← Previous: Isaac ROS](/docs/module3/isaac-ros) | [Next: Module 4 →](/docs/module4/introduction-vla)
