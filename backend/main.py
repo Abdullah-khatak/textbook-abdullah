@@ -5,6 +5,7 @@ from services.gemini_service import GeminiService
 from services.qdrant_service import QdrantService
 from services.database import DatabaseService
 import uvicorn
+import traceback
 
 app = FastAPI(title="Physical AI Chatbot API")
 
@@ -38,42 +39,79 @@ async def root():
 async def chat(message: ChatMessage):
     """Handle chat requests"""
     try:
+        print(f"📩 Received message: {message.message[:50]}...")
+        
         # If user selected text, use it as context
         if message.selected_text:
+            print("📝 Using selected text as context")
             context = message.selected_text
             sources = [{"text": message.selected_text, "source": "Selected Text"}]
         else:
+            print("🔍 Searching for relevant content...")
             # Generate query embedding
-            query_embedding = gemini_service.generate_query_embedding(message.message)
+            try:
+                query_embedding = gemini_service.generate_query_embedding(message.message)
+                print(f"✅ Generated embedding with {len(query_embedding)} dimensions")
+            except Exception as e:
+                print(f"❌ Error generating embedding: {str(e)}")
+                traceback.print_exc()
+                raise HTTPException(status_code=500, detail=f"Embedding error: {str(e)}")
             
             # Search for similar content in Qdrant
-            search_results = qdrant_service.search_similar(query_embedding, limit=3)
+            try:
+                search_results = qdrant_service.search_similar(query_embedding, limit=3)
+                print(f"✅ Found {len(search_results)} relevant results")
+            except Exception as e:
+                print(f"❌ Error searching Qdrant: {str(e)}")
+                traceback.print_exc()
+                raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")
             
             # Combine search results as context
-            context = "\n\n".join([result["text"] for result in search_results])
-            sources = [
-                {
-                    "text": result["text"][:200] + "...",
-                    "source": result["metadata"].get("file_name", "Unknown"),
-                    "score": result["score"]
-                }
-                for result in search_results
-            ]
+            if search_results:
+                context = "\n\n".join([result["text"] for result in search_results])
+                sources = [
+                    {
+                        "text": result["text"][:200] + "...",
+                        "source": result.get("metadata", {}).get("file_name", "Textbook"),
+                        "score": result.get("score", 0.0)
+                    }
+                    for result in search_results
+                ]
+            else:
+                print("⚠️ No search results found, using general context")
+                context = "This is a textbook about Physical AI and Humanoid Robotics covering ROS 2, simulation, NVIDIA Isaac, and Vision-Language-Action systems."
+                sources = [{"text": "General knowledge", "source": "Textbook", "score": 0.0}]
         
         # Generate response using Gemini
-        response = gemini_service.generate_response(message.message, context)
+        try:
+            print("🤖 Generating response with Gemini...")
+            response = gemini_service.generate_response(message.message, context)
+            print(f"✅ Generated response: {response[:50]}...")
+        except Exception as e:
+            print(f"❌ Error generating response: {str(e)}")
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"AI response error: {str(e)}")
         
         # Save chat to database
-        await db_service.save_chat(
-            user_message=message.message,
-            bot_response=response,
-            selected_text=message.selected_text
-        )
+        try:
+            await db_service.save_chat(
+                user_message=message.message,
+                bot_response=response,
+                selected_text=message.selected_text
+            )
+            print("✅ Saved chat to database")
+        except Exception as e:
+            print(f"⚠️ Warning: Could not save to database: {str(e)}")
+            # Don't fail the request if DB save fails
         
         return ChatResponse(response=response, sources=sources)
         
+    except HTTPException:
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        print(f"❌ UNEXPECTED ERROR in /chat: {str(e)}")
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
 
 @app.post("/signup")
 async def signup(request: dict):
@@ -106,6 +144,8 @@ async def signup(request: dict):
             raise HTTPException(status_code=400, detail=result["message"])
             
     except Exception as e:
+        print(f"❌ Error in /signup: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/signin")
@@ -126,6 +166,8 @@ async def signin(request: dict):
             raise HTTPException(status_code=401, detail=result["message"])
             
     except Exception as e:
+        print(f"❌ Error in /signin: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/personalize")
@@ -163,6 +205,8 @@ Provide the personalized version of the content maintaining the same structure a
         return {"personalizedContent": response.text}
         
     except Exception as e:
+        print(f"❌ Error in /personalize: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/translate")
@@ -195,6 +239,8 @@ Provide the English translation:"""
         return {"translatedContent": response.text}
         
     except Exception as e:
+        print(f"❌ Error in /translate: {str(e)}")
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/health")
