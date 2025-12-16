@@ -72,6 +72,16 @@ const config = {
             label: 'Textbook',
           },
           {
+            to: '/signup',
+            label: 'Sign Up',
+            position: 'right',
+          },
+          {
+            to: '/signin',
+            label: 'Sign In',
+            position: 'right',
+          },
+          {
             href: 'https://github.com/MUHAMMADSHAHRUKH459/robotics-textbook',
             label: 'GitHub',
             position: 'right',

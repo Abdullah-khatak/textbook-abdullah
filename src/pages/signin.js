@@ -10,7 +10,7 @@ export default function Signin() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -28,7 +28,7 @@ export default function Signin() {
         // Save user profile to localStorage
         localStorage.setItem('userProfile', JSON.stringify(data.user));
         localStorage.setItem('isLoggedIn', 'true');
-        
+
         // Redirect to intro page
         window.location.href = '/docs/intro';
       } else {

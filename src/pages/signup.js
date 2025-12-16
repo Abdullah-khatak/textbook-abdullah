@@ -14,7 +14,7 @@ export default function Signup() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError('');
@@ -32,7 +32,7 @@ export default function Signup() {
         // Save user profile to localStorage
         localStorage.setItem('userProfile', JSON.stringify(data.user));
         localStorage.setItem('isLoggedIn', 'true');
-        
+
         // Redirect to intro page
         window.location.href = '/docs/intro';
       } else {
@@ -47,8 +47,8 @@ export default function Signup() {
 
   return (
     <Layout title="Sign Up" description="Create your account">
-      <div className={styles.authContainer}>
-        <div className={styles.authCard}>
+      <div className={styles.signupContainer}>
+        <div className={styles.signupCard}>
           <h1>Create Your Account</h1>
           <p className={styles.subtitle}>Join us to personalize your learning experience</p>
 
@@ -128,7 +128,7 @@ export default function Signup() {
             </button>
           </form>
 
-          <p className={styles.authLink}>
+          <p className={styles.signinLink}>
             Already have an account? <a href="/signin">Sign In</a>
           </p>
         </div>

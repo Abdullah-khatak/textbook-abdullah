@@ -5,7 +5,6 @@ from services.gemini_service import GeminiService
 from services.qdrant_service import QdrantService
 from services.database import DatabaseService
 import uvicorn
-import traceback
 
 app = FastAPI(title="Physical AI Chatbot API")
 
@@ -37,81 +36,33 @@ async def root():
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(message: ChatMessage):
-    """Handle chat requests"""
+    """Handle chat requests - WITHOUT embeddings to avoid rate limits"""
     try:
-        print(f"📩 Received message: {message.message[:50]}...")
-        
         # If user selected text, use it as context
         if message.selected_text:
-            print("📝 Using selected text as context")
             context = message.selected_text
-            sources = [{"text": message.selected_text, "source": "Selected Text"}]
+            sources = [{"text": message.selected_text[:200] + "...", "source": "Selected Text"}]
         else:
-            print("🔍 Searching for relevant content...")
-            # Generate query embedding
-            try:
-                query_embedding = gemini_service.generate_query_embedding(message.message)
-                print(f"✅ Generated embedding with {len(query_embedding)} dimensions")
-            except Exception as e:
-                print(f"❌ Error generating embedding: {str(e)}")
-                traceback.print_exc()
-                raise HTTPException(status_code=500, detail=f"Embedding error: {str(e)}")
-            
-            # Search for similar content in Qdrant
-            try:
-                search_results = qdrant_service.search_similar(query_embedding, limit=3)
-                print(f"✅ Found {len(search_results)} relevant results")
-            except Exception as e:
-                print(f"❌ Error searching Qdrant: {str(e)}")
-                traceback.print_exc()
-                raise HTTPException(status_code=500, detail=f"Search error: {str(e)}")
-            
-            # Combine search results as context
-            if search_results:
-                context = "\n\n".join([result["text"] for result in search_results])
-                sources = [
-                    {
-                        "text": result["text"][:200] + "...",
-                        "source": result.get("metadata", {}).get("file_name", "Textbook"),
-                        "score": result.get("score", 0.0)
-                    }
-                    for result in search_results
-                ]
-            else:
-                print("⚠️ No search results found, using general context")
-                context = "This is a textbook about Physical AI and Humanoid Robotics covering ROS 2, simulation, NVIDIA Isaac, and Vision-Language-Action systems."
-                sources = [{"text": "General knowledge", "source": "Textbook", "score": 0.0}]
+            # No embeddings - just use the question directly
+            context = """You are a helpful assistant for a Physical AI & Humanoid Robotics textbook. 
+            Answer questions about ROS 2, Gazebo, NVIDIA Isaac, humanoid robots, and robotics in general.
+            Be clear, technical but accessible, and provide practical examples when possible."""
+            sources = [{"text": "AI Knowledge Base", "source": "Gemini"}]
         
-        # Generate response using Gemini
-        try:
-            print("🤖 Generating response with Gemini...")
-            response = gemini_service.generate_response(message.message, context)
-            print(f"✅ Generated response: {response[:50]}...")
-        except Exception as e:
-            print(f"❌ Error generating response: {str(e)}")
-            traceback.print_exc()
-            raise HTTPException(status_code=500, detail=f"AI response error: {str(e)}")
+        # Generate response using Gemini (text generation only, no embeddings)
+        response = gemini_service.generate_response(message.message, context)
         
         # Save chat to database
-        try:
-            await db_service.save_chat(
-                user_message=message.message,
-                bot_response=response,
-                selected_text=message.selected_text
-            )
-            print("✅ Saved chat to database")
-        except Exception as e:
-            print(f"⚠️ Warning: Could not save to database: {str(e)}")
-            # Don't fail the request if DB save fails
+        await db_service.save_chat(
+            user_message=message.message,
+            bot_response=response,
+            selected_text=message.selected_text
+        )
         
         return ChatResponse(response=response, sources=sources)
         
-    except HTTPException:
-        raise
     except Exception as e:
-        print(f"❌ UNEXPECTED ERROR in /chat: {str(e)}")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=f"Unexpected error: {str(e)}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/signup")
 async def signup(request: dict):
@@ -144,8 +95,6 @@ async def signup(request: dict):
             raise HTTPException(status_code=400, detail=result["message"])
             
     except Exception as e:
-        print(f"❌ Error in /signup: {str(e)}")
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.post("/signin")
@@ -166,82 +115,109 @@ async def signin(request: dict):
             raise HTTPException(status_code=401, detail=result["message"])
             
     except Exception as e:
-        print(f"❌ Error in /signin: {str(e)}")
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.post("/personalize")
-async def personalize_content(request: dict):
-    """Personalize content based on user background"""
+@app.post("/chat", response_model=ChatResponse)
+async def chat(message: ChatMessage):
+    """Handle chat requests - WITHOUT embeddings to avoid rate limits"""
     try:
-        content = request.get("content", "")
-        user_background = request.get("userBackground", {})
+        print(f"📩 Received: {message.message}")
         
-        experience_level = user_background.get("experienceLevel", "beginner")
-        software_bg = user_background.get("softwareBackground", "")
-        hardware_bg = user_background.get("hardwareBackground", "")
-        
-        # Create personalization prompt
-        prompt = f"""You are an educational content personalizer. Adjust the following technical content for a student with this background:
-
-Experience Level: {experience_level}
-Software Background: {software_bg}
-Hardware Background: {hardware_bg}
-
-Original Content:
-{content}
-
-Instructions:
-- If beginner: Simplify technical terms, add more explanations, use analogies
-- If intermediate: Balance theory and practice, assume basic programming knowledge
-- If advanced: Add advanced topics, reduce basic explanations, include optimization tips
-- Adjust code examples complexity based on software background
-- Reference hardware they know when explaining concepts
-
-Provide the personalized version of the content maintaining the same structure and format."""
-        
-        response = gemini_service.model.generate_content(prompt)
-        
-        return {"personalizedContent": response.text}
-        
-    except Exception as e:
-        print(f"❌ Error in /personalize: {str(e)}")
-        traceback.print_exc()
-        raise HTTPException(status_code=500, detail=str(e))
-
-@app.post("/translate")
-async def translate_content(request: dict):
-    """Translate content to Urdu or back to English"""
-    try:
-        content = request.get("content", "")
-        target_language = request.get("targetLanguage", "urdu")
-        
-        if target_language == "urdu":
-            prompt = f"""Translate the following technical content to Urdu (اردو). 
-Keep technical terms in English but explain them in Urdu.
-Maintain markdown formatting.
-
-Content to translate:
-{content}
-
-Provide the Urdu translation:"""
+        # If user selected text, use it as context
+        if message.selected_text:
+            print("📝 Using selected text")
+            context = message.selected_text
+            sources = [{"text": message.selected_text[:200] + "...", "source": "Selected Text"}]
         else:
-            prompt = f"""Translate the following Urdu technical content back to English.
-Maintain markdown formatting.
-
-Content to translate:
-{content}
-
-Provide the English translation:"""
+            print("💭 Using general context")
+            # No embeddings - just use the question directly
+            context = """You are a helpful assistant for a Physical AI & Humanoid Robotics textbook. 
+            Answer questions about ROS 2, Gazebo, NVIDIA Isaac, humanoid robots, and robotics in general.
+            Be clear, technical but accessible, and provide practical examples when possible."""
+            sources = [{"text": "AI Knowledge Base", "source": "Gemini"}]
         
-        response = gemini_service.model.generate_content(prompt)
+        print("🤖 Calling Gemini...")
+        # Generate response using Gemini (text generation only, no embeddings)
+        response = gemini_service.generate_response(message.message, context)
+        print(f"✅ Got response: {response[:50]}")
         
-        return {"translatedContent": response.text}
+        print("💾 Saving to database...")
+        # Save chat to database
+        await db_service.save_chat(
+            user_message=message.message,
+            bot_response=response,
+            selected_text=message.selected_text
+        )
+        print("✅ Saved!")
+        
+        return ChatResponse(response=response, sources=sources)
         
     except Exception as e:
-        print(f"❌ Error in /translate: {str(e)}")
+        print(f"❌ ERROR: {str(e)}")
+        import traceback
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/chat", response_model=ChatResponse)
+async def chat(message: ChatMessage):
+    """Handle chat requests - WITHOUT embeddings to avoid rate limits"""
+    
+    # Step 1: Log incoming request
+    print("=" * 50)
+    print(f"📩 CHAT REQUEST RECEIVED")
+    print(f"Message: {message.message}")
+    print(f"Selected text: {message.selected_text}")
+    print("=" * 50)
+    
+    try:
+        # Step 2: Determine context
+        if message.selected_text:
+            print("✅ Using selected text as context")
+            context = message.selected_text
+            sources = [{"text": message.selected_text[:200] + "...", "source": "Selected Text"}]
+        else:
+            print("✅ Using general knowledge context")
+            context = """You are a helpful assistant for a Physical AI & Humanoid Robotics textbook. 
+            Answer questions about ROS 2, Gazebo, NVIDIA Isaac, humanoid robots, and robotics in general.
+            Be clear, technical but accessible, and provide practical examples when possible."""
+            sources = [{"text": "AI Knowledge Base", "source": "AI"}]
+        
+        # Step 3: Call AI service
+        print("🤖 Calling AI service...")
+        try:
+            response = gemini_service.generate_response(message.message, context)
+            print(f"✅ AI Response received: {len(response)} characters")
+        except Exception as ai_error:
+            print(f"❌ AI SERVICE ERROR: {type(ai_error).__name__}: {str(ai_error)}")
+            import traceback
+            traceback.print_exc()
+            raise HTTPException(status_code=500, detail=f"AI service error: {str(ai_error)}")
+        
+        # Step 4: Save to database
+        print("💾 Saving to database...")
+        try:
+            await db_service.save_chat(
+                user_message=message.message,
+                bot_response=response,
+                selected_text=message.selected_text
+            )
+            print("✅ Saved to database")
+        except Exception as db_error:
+            print(f"⚠️ DATABASE SAVE WARNING: {str(db_error)}")
+            # Don't fail the request if DB save fails
+        
+        # Step 5: Return response
+        print("✅ Returning response to client")
+        return ChatResponse(response=response, sources=sources)
+        
+    except HTTPException as he:
+        print(f"❌ HTTP EXCEPTION: {he.status_code} - {he.detail}")
+        raise
+    except Exception as e:
+        print(f"❌ UNEXPECTED ERROR: {type(e).__name__}: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"Server error: {str(e)}")
 
 @app.get("/health")
 async def health_check():
