@@ -1,6 +1,7 @@
 fastapi
 uvicorn
-google-generativeai
+openai
 qdrant-client
-aiosqlite
+asyncpg
 python-dotenv
+pydantic
