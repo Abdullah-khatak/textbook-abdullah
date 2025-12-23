@@ -11,7 +11,7 @@ export default function ChatWidget() {
 
   // Initialize user profile on mount fix deposit
   useEffect(() => {
-    // Check if user profile exists in localStorage
+    // Check if user profile exists in localStorage from vs
     const userProfile = localStorage.getItem('userProfile');
     if (!userProfile) {
       // Set a default profile for demo purposes
