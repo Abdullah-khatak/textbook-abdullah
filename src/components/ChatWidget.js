@@ -9,7 +9,7 @@ export default function ChatWidget() {
   const [selectedText, setSelectedText] = useState('');
   const messagesEndRef = useRef(null);
 
-  // Initialize user profile on mount
+  // Initialize user profile on mount fix deposit
   useEffect(() => {
     // Check if user profile exists in localStorage
     const userProfile = localStorage.getItem('userProfile');
